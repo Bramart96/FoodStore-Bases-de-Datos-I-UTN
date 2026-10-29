@@ -31,7 +31,7 @@ Se utiliza **MySQL Workbench** conectado a **MySQL Server 8.0.46**, versión com
 - Cotejamiento: `utf8mb4_0900_ai_ci`.
 - Cifrado predeterminado indicado por el servidor: `N`.
 
-La presencia de la base y el resultado de la consulta fueron comprobados. Las tablas todavía no cuentan con pruebas de ejecución confirmadas.
+La presencia de la base y el resultado de la consulta fueron comprobados. La tabla `categoria` fue creada y probada en MySQL Workbench; `producto` y su relación permanecen pendientes.
 
 ## 4. Diseño relacional inicial
 
@@ -48,7 +48,7 @@ La presencia de la base y el resultado de la consulta fueron comprobados. Las ta
 
 **Decisión:** para la unicidad de nombres de categorías activas se utiliza una columna generada: conserva el nombre cuando `eliminado = 0` y toma `NULL` cuando la categoría se elimina lógicamente. La restricción `UNIQUE` sobre esa columna impide duplicados activos y permite conservar registros históricos. Se eligió esta alternativa frente a `UNIQUE(nombre)`, que también impediría reutilizar nombres de categorías dadas de baja.
 
-**Estado:** SQL escrito en `sql/01_esquema.sql`, pendiente de ejecutar y verificar en Workbench.
+**Estado:** tabla `categoria` creada y comprobada en Workbench. Se verificaron sus restricciones PRIMARY KEY, UNIQUE y dos CHECK; las pruebas de inserción están documentadas en el apartado 5.
 
 ### producto
 
@@ -60,15 +60,22 @@ Relación prevista: `producto.categoria_id` → `categoria.id` (1:N). La definic
 
 ## 5. Pruebas y evidencias
 
-| Prueba | Resultado | Evidencia |
-| --- | --- | --- |
-| `SELECT VERSION()` | 8.0.46, comprobado | Captura del estudiante |
-| Creación de `foodstore_bdi` | Esquema visible en Workbench | Captura del estudiante |
-| `SHOW CREATE DATABASE foodstore_bdi` | utf8mb4 / utf8mb4_0900_ai_ci | Resultado textual aportado |
-| `CREATE TABLE categoria` | Pendiente de ejecución | — |
-| Validación de restricciones de `categoria` | Pendiente | — |
+Las verificaciones siguientes se ejecutaron en MySQL Workbench. Los resultados corresponden a capturas originales aportadas durante el desarrollo, no a datos simulados.
 
-Las capturas y la portada proporcionada se incorporarán al PDF único de entrega. No se considerarán realizadas pruebas que no cuenten con resultados.
+| Figura | Prueba | Resultado comprobado |
+| --- | --- | --- |
+| 1 | `SELECT VERSION()` | MySQL Server 8.0.46 |
+| 2 | Base `foodstore_bdi` en Workbench | Esquema existente; `SHOW CREATE DATABASE` confirmó `utf8mb4 / utf8mb4_0900_ai_ci` |
+| 3 | `CREATE TABLE categoria` y `SHOW CREATE TABLE` | Tabla creada; definición consultada correctamente |
+| 4 | Consulta a `information_schema.TABLE_CONSTRAINTS` | 4 restricciones: PRIMARY KEY, UNIQUE y 2 CHECK |
+| 5 | Dos inserciones válidas (`Bebidas`, `Postres`) | Se insertaron 2 registros, con ID y fecha generados |
+| 6 | Duplicar una categoría activa (`Bebidas`) | Rechazada: error MySQL 1062, restricción `uq_categoria_nombre_activo` |
+| 7 | Insertar nombre compuesto por espacios | Rechazada: error MySQL 3819, restricción `chk_categoria_nombre` |
+| 8 | `SELECT COUNT(*) AS total_categorias FROM categoria` | Total **2**, sin registros adicionales de las inserciones rechazadas |
+
+**Conclusión de las pruebas de categoría:** el servidor aceptó ambas inserciones válidas y rechazó las dos inválidas por causas diferentes (UNIQUE y CHECK). La consulta final confirmó la conservación de los dos registros iniciales. Esto cubre las cuatro pruebas solicitadas por la consigna, pero **no completa por sí solo la Etapa 1**, ya que faltan la tabla `producto`, su FK y el DER/modelo relacional completo.
+
+**Referencia al script:** `sql/01_esquema.sql` contiene el DDL de la tabla. Las consultas de prueba se ejecutaron en Workbench; se integrarán de manera ordenada en los scripts y evidencias de la entrega final.
 
 ## 6. Próximas etapas
 
