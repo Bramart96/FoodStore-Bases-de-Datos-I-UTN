@@ -37,11 +37,13 @@ Los scripts y demás archivos se incorporan a medida que se implementan y prueba
 ## Avance
 
 - Base de datos `foodstore_bdi` creada y verificada.
-- Estructura de `categoria` diseñada; ejecución y pruebas de sus restricciones pendientes.
-- Modelo de `producto`, carga masiva, reportes, seguridad y concurrencia pendientes.
+- Tablas `categoria` y `producto` creadas; PK, FK, UNIQUE y CHECK verificadas en Workbench.
+- Pruebas de integridad de ambas tablas realizadas, con registro de resultados en el informe.
+- DER generado y guardado localmente; incorporación de los archivos exportados al repositorio pendiente.
+- Carga masiva, reportes, seguridad y concurrencia pendientes.
 
 ## Ejecución
 
-Abrir `sql/01_esquema.sql` en MySQL Workbench y ejecutarlo sobre la conexión local. El script contiene la creación del esquema y la definición inicial de `categoria`. Revisar el resultado con `SHOW CREATE TABLE` antes de continuar.
+Abrir `sql/01_esquema.sql` en MySQL Workbench y ejecutarlo sobre la conexión local. El script contiene el esquema y las definiciones de `categoria` y `producto`. Revisar el resultado con `SHOW CREATE TABLE` antes de continuar.
 
 El script utiliza `IF NOT EXISTS` para evitar volver a crear objetos existentes; no elimina datos previos. La estrategia de reconstrucción completa del esquema se definirá para la entrega final.

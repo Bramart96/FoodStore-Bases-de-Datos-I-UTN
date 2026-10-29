@@ -31,7 +31,7 @@ Se utiliza **MySQL Workbench** conectado a **MySQL Server 8.0.46**, versión com
 - Cotejamiento: `utf8mb4_0900_ai_ci`.
 - Cifrado predeterminado indicado por el servidor: `N`.
 
-La presencia de la base y el resultado de la consulta fueron comprobados. La tabla `categoria` fue creada y probada en MySQL Workbench; `producto` y su relación permanecen pendientes.
+La presencia de la base y el resultado de la consulta fueron comprobados. Las dos tablas fueron creadas en MySQL Workbench y se verificaron sus restricciones y la relación mediante clave foránea.
 
 ## 4. Diseño relacional inicial
 
@@ -52,30 +52,63 @@ La presencia de la base y el resultado de la consulta fueron comprobados. La tab
 
 ### producto
 
-Atributos de referencia: `id`, `nombre`, `precio`, `descripcion`, `stock`, `imagen`, `disponible`, `eliminado`, `created_at`, `categoria_id`.
+| Atributo | Tipo | Restricción |
+| --- | --- | --- |
+| id | INT UNSIGNED | PRIMARY KEY, AUTO_INCREMENT |
+| nombre | VARCHAR(120) | NOT NULL, CHECK nombre no vacío |
+| precio | DECIMAL(10,2) | NOT NULL, CHECK precio >= 0 |
+| descripcion | VARCHAR(255) | NULL |
+| stock | INT | NOT NULL, DEFAULT 0, CHECK stock >= 0 |
+| imagen | VARCHAR(255) | NULL |
+| disponible | BOOLEAN | NOT NULL, DEFAULT TRUE, CHECK 0/1 |
+| eliminado | BOOLEAN | NOT NULL, DEFAULT FALSE, CHECK 0/1 |
+| created_at | DATETIME | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+| categoria_id | INT UNSIGNED | NOT NULL, FOREIGN KEY a categoria(id) |
 
-Relación prevista: `producto.categoria_id` → `categoria.id` (1:N). La definición concreta de tipos, obligatoriedad, CHECK y comportamiento referencial está pendiente.
+**Relación implementada:** una categoría puede tener varios productos; cada producto referencia una única categoría existente. La clave `fk_producto_categoria` utiliza `ON DELETE RESTRICT` y `ON UPDATE RESTRICT`. Se verificaron una inserción válida, un rechazo por FK y dos rechazos por CHECK.
 
-**Cuestiones a resolver:** la clave foránea valida la existencia de una categoría, pero no su estado activo. También falta decidir cómo impedir la baja lógica de categorías con productos activos.
+**Alcance de esta implementación:** la FK impide categorías inexistentes, pero no verifica si `categoria.eliminado = 0`. Tampoco impide por sí sola la baja lógica de una categoría con productos activos. Estas reglas del negocio siguen pendientes de resolución; no se las presenta como implementadas.
+
+### Representación gráfica y modelo relacional
+
+El estudiante generó el diagrama EER mediante ingeniería inversa en MySQL Workbench, con `categoria` y `producto`, sus claves y la relación **1:N no identificadora**. Confirmó haber guardado `FoodStore_BDI.mwb` y exportado `DER_FoodStore.png` en su equipo. La captura del diagrama fue revisada; los archivos exportados aún no se han incorporado al repositorio.
+
+```text
+categoria(id PK, nombre, descripcion, eliminado, created_at,
+          nombre_activo UNIQUE [generado])
+
+producto(id PK, nombre, precio, descripcion, stock, imagen,
+         disponible, eliminado, created_at, categoria_id FK)
+
+FK: producto.categoria_id -> categoria.id
+```
 
 ## 5. Pruebas y evidencias
 
-Las verificaciones siguientes se ejecutaron en MySQL Workbench. Los resultados corresponden a capturas originales aportadas durante el desarrollo, no a datos simulados.
+Las comprobaciones se realizaron en MySQL Workbench. Se conserva el resultado real de cada prueba; en el PDF final se seleccionarán únicamente las capturas necesarias y se presentará un resumen técnico en texto.
 
-| Figura | Prueba | Resultado comprobado |
-| --- | --- | --- |
-| 1 | `SELECT VERSION()` | MySQL Server 8.0.46 |
-| 2 | Base `foodstore_bdi` en Workbench | Esquema existente; `SHOW CREATE DATABASE` confirmó `utf8mb4 / utf8mb4_0900_ai_ci` |
-| 3 | `CREATE TABLE categoria` y `SHOW CREATE TABLE` | Tabla creada; definición consultada correctamente |
-| 4 | Consulta a `information_schema.TABLE_CONSTRAINTS` | 4 restricciones: PRIMARY KEY, UNIQUE y 2 CHECK |
-| 5 | Dos inserciones válidas (`Bebidas`, `Postres`) | Se insertaron 2 registros, con ID y fecha generados |
-| 6 | Duplicar una categoría activa (`Bebidas`) | Rechazada: error MySQL 1062, restricción `uq_categoria_nombre_activo` |
-| 7 | Insertar nombre compuesto por espacios | Rechazada: error MySQL 3819, restricción `chk_categoria_nombre` |
-| 8 | `SELECT COUNT(*) AS total_categorias FROM categoria` | Total **2**, sin registros adicionales de las inserciones rechazadas |
+| Prueba | Resultado comprobado |
+| --- | --- |
+| Versión del servidor | `SELECT VERSION()` devolvió `8.0.46` |
+| Esquema `foodstore_bdi` | Creado e inspeccionado: `utf8mb4 / utf8mb4_0900_ai_ci` |
+| `categoria`: creación y definición | `SHOW CREATE TABLE` devolvió el DDL |
+| `categoria`: restricciones | 1 PRIMARY KEY, 1 UNIQUE y 2 CHECK |
+| `categoria`: insertar `Bebidas` y `Postres` | 2 inserciones válidas |
+| `categoria`: nombre activo duplicado | Error `1062`, `uq_categoria_nombre_activo` |
+| `categoria`: nombre solo espacios | Error `3819`, `chk_categoria_nombre` |
+| `categoria`: recuento final | 2 registros |
+| `producto`: creación y definición | `SHOW CREATE TABLE` devolvió el DDL |
+| `producto`: restricciones | 1 PRIMARY KEY, 1 FOREIGN KEY y 5 CHECK |
+| `producto`: insertar `Agua mineral 500 ml` | Inserción válida (precio 1200.00, stock 20, categoria_id 1) |
+| `producto`: categoría 999999 inexistente | Error `1452`, restricción FK |
+| `producto`: precio -500.00 | Error `3819`, `chk_producto_precio` |
+| `producto`: stock -10 | Error `3819`, `chk_producto_stock` |
+| `producto`: recuento final | 1 registro, informado por el estudiante |
+| Diagrama EER | Generado y revisado; archivos guardados localmente |
 
-**Conclusión de las pruebas de categoría:** el servidor aceptó ambas inserciones válidas y rechazó las dos inválidas por causas diferentes (UNIQUE y CHECK). La consulta final confirmó la conservación de los dos registros iniciales. Esto cubre las cuatro pruebas solicitadas por la consigna, pero **no completa por sí solo la Etapa 1**, ya que faltan la tabla `producto`, su FK y el DER/modelo relacional completo.
+**Conclusión de integridad:** las pruebas realizadas muestran que el modelo acepta inserciones válidas y rechaza registros que violan las restricciones verificadas. El resultado final informado fue de dos categorías y un producto. La Etapa 1 dispone de las entidades, la relación y las pruebas mínimas; se revisará la presentación del DER exportado y la adecuación de las reglas de negocio pendientes antes de declararla cerrada.
 
-**Referencia al script:** `sql/01_esquema.sql` contiene el DDL de la tabla. Las consultas de prueba se ejecutaron en Workbench; se integrarán de manera ordenada en los scripts y evidencias de la entrega final.
+**Referencia al código:** `sql/01_esquema.sql`. Las inserciones de prueba y sus errores se ejecutaron en Workbench; se preparará una versión ordenada y reproducible de las evidencias para la entrega.
 
 ## 6. Próximas etapas
 
