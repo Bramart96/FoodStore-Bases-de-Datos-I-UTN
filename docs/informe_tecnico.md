@@ -136,11 +136,11 @@ La estructura respeta la FK de producto a categoria; las comprobaciones del serv
 
 ## 7. Consultas, vista y rendimiento — Etapa 3
 
-Se ejecutaron y comprobaron cuatro consultas: JOIN para listar productos de Bebidas, JOIN con filtro por rango de precios, GROUP BY/HAVING para categorías con al menos 80 productos y una subconsulta para encontrar productos por encima del precio promedio. La subconsulta original dio un error 1064; se probó una versión con alias explícitos que devolvió 15 filas. También se creó y consultó con éxito \`vista_resumen_categorias\`, que muestra la cantidad de productos, el stock total y el precio promedio de cada categoría activa.
+Se ejecutaron y comprobaron cuatro consultas: JOIN para listar productos de Bebidas, JOIN con filtro por rango de precios, GROUP BY/HAVING para categorías con al menos 80 productos y una subconsulta para encontrar productos por encima del precio promedio. La subconsulta original dio un error 1064; se probó una versión con alias explícitos que devolvió 15 filas. También se creó y consultó con éxito `vista_resumen_categorias`, que muestra la cantidad de productos, el stock total y el precio promedio de cada categoría activa.
 
-Se realizaron tres mediciones por consulta y condición mediante \`EXPLAIN ANALYZE\`. Se tomaron los tiempos \`actual time\` del operador raíz del plan, en milisegundos; no los tiempos del panel Action Output de Workbench. Antes de agregar índices, las búsquedas por nombre y precio realizaron un escaneo completo de la tabla producto. Tras crear los índices, la búsqueda exacta pasó a utilizar \`idx_producto_nombre\`, y la búsqueda por rango utilizó \`idx_producto_precio\`. En el JOIN se observó un acceso por índice a categoría a través de \`idx_categoria_nombre\`; el detalle completo del acceso a producto no se conservó en los textos compartidos por el estudiante.
+Se realizaron tres mediciones por consulta y condición mediante `EXPLAIN ANALYZE`. Se tomaron los tiempos `actual time` del operador raíz del plan, en milisegundos; no los tiempos del panel Action Output de Workbench. Antes de agregar índices, las búsquedas por nombre y precio realizaron un escaneo completo de la tabla producto. Tras crear los índices, la búsqueda exacta pasó a utilizar `idx_producto_nombre`, y la búsqueda por rango utilizó `idx_producto_precio`. En el JOIN se observó un acceso por índice a categoría a través de `idx_categoria_nombre`; el detalle completo del acceso a producto no se conservó en los textos compartidos por el estudiante.
 
-**Índices creados y comprobados:** \`idx_producto_nombre\`, \`idx_producto_precio\`, \`idx_producto_categoria_precio\`, \`idx_categoria_nombre\`. Se verificaron con SHOW INDEX sobre ambas tablas.
+**Índices creados y comprobados:** `idx_producto_nombre`, `idx_producto_precio`, `idx_producto_categoria_precio`, `idx_categoria_nombre`. Se verificaron con SHOW INDEX sobre ambas tablas.
 
 | Consulta | Antes: 3 ejecuciones (ms) | Mediana antes (ms) | Después: 3 ejecuciones (ms) | Mediana después (ms) |
 | --- | --- | ---: | --- | ---: |
@@ -152,15 +152,30 @@ Se realizaron tres mediciones por consulta y condición mediante \`EXPLAIN ANALY
 
 **Archivos:** sql/04_indices.sql, sql/05_consultas.sql, sql/05_explain.sql y sql/06_vistas.sql. Los archivos organizan las consultas ya ejecutadas; falta realizar la prueba integral de reconstrucción del ZIP.
 
-## 8. Próximas etapas
+## 8. Seguridad, permisos y consulta parametrizada — Etapa 4
+
+Se crearon dos vistas diferenciadas: \`vista_catalogo_publico\`, que expone id, nombre, precio y categoría sin stock; y \`vista_inventario_interno\`, que expone id, nombre, stock y categoría sin precios. Se verificaron ambas mediante SELECT con LIMIT 10. La vista resumen de la Etapa 3 permanece independiente.
+
+Se creó mediante Workbench el usuario \`fs_catalogo\` con host \`localhost\`, y se le concedió únicamente SELECT sobre \`vista_catalogo_publico\`. Los permisos se inspeccionaron con SHOW GRANTS y se conectó un segundo cliente con este usuario. Pruebas: consulta de vista pública → 5 filas; consulta directa a \`producto\` → error 1142; consulta a \`vista_inventario_interno\` → error 1142. Posteriormente se cambió la contraseña de la cuenta para que la anterior no siguiera siendo válida; se comprobó una nueva conexión y una consulta exitosa de cinco filas. No se almacena ninguna contraseña en el repositorio.
+
+Se implementó \`sp_buscar_producto_seguro(IN p_nombre VARCHAR(120))\`, que usa el parámetro directamente en una condición SQL estática, sin concatenación ni SQL dinámico. La búsqueda del agua mineral devolvió un registro; la cadena de prueba \`' OR '1' = '1\` devolvió cero filas y no alteró la condición de la consulta. La advertencia 1305 de DROP PROCEDURE IF EXISTS se debió a la inexistencia inicial del procedimiento.
+
+Se efectuaron dos pruebas negativas de integridad sobre producto (en consultas separadas para no interrumpir el resto del script): categoría inexistente → error 1452 por FK; precio negativo → error 3819 por \`chk_producto_precio\`. Tras esos rechazos se verificó que había 9.900 productos, es decir, las inserciones inválidas no modificaron la carga.
+
+**Archivos:** las vistas se incorporan a \`sql/06_vistas.sql\`; \`sql/07_seguridad.sql\` reúne el procedimiento, el permiso SELECT y las instrucciones para las pruebas manuales. La creación inicial del usuario requiere definir una contraseña privada en Workbench, fuera del código. La secuencia completa todavía no ha sido probada desde un servidor sin cuentas ni esquemas.
+
+**Conclusión:** se verificaron controles de acceso según el principio de mínimo privilegio, exposición acotada de datos mediante vistas, consulta parametrizada y dos restricciones de integridad. No se afirma que esto constituya una auditoría integral de seguridad.
+
+## 9. Próximas etapas
 
 
 
-Las etapas de carga masiva y consultas/rendimiento fueron ejecutadas y comprobadas. Restan seguridad (dos vistas de acceso restringido, permisos y consulta segura), concurrencia, deadlock, aislamiento, transacciones y la integración de la entrega.
+
+Las etapas de carga masiva, consultas/rendimiento y seguridad fueron ejecutadas y comprobadas. Restan concurrencia, deadlock, aislamiento, transacciones y la integración de la entrega.
 
 Los scripts se incorporarán cuando el diseño y los resultados se comprueben en el entorno de trabajo.
 
-## 9. Entrega
+## 10. Entrega
 
 La entrega se organizará en un **PDF único**, un **ZIP con los scripts SQL ordenados e idempotentes** y un **video de 10 a 15 minutos**. La evidencia de uso de IA se recopilará como anexo textual completo por etapa, tal como solicita la consigna, fuera del código del repositorio.
 

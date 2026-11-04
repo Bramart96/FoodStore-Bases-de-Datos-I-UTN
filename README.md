@@ -32,6 +32,7 @@ sql/
   05_consultas.sql
   05_explain.sql
   06_vistas.sql
+  07_seguridad.sql
 docs/
   informe_tecnico.md
 README.md
@@ -48,10 +49,11 @@ Los scripts y demás archivos se incorporan a medida que se implementan y prueba
 - DER generado y guardado localmente; incorporación de los archivos exportados al repositorio pendiente.
 - Carga masiva realizada: 100 categorías y 9.900 productos; 5 controles de consistencia comprobados.
 - Etapa 3 comprobada: cuatro consultas, una vista, cuatro índices y tres comparaciones de rendimiento con tres mediciones por condición.
-- Seguridad y concurrencia pendientes.
+- Etapa 4 comprobada: dos vistas con columnas limitadas, procedimiento parametrizado, acceso mínimo y dos rechazos de integridad; contraseña del lector renovada y conexión verificada.
+- Concurrencia y transacciones pendientes.
 
 ## Ejecución
 
-Ejecutar en orden `sql/01_esquema.sql`, `sql/02_catalogos.sql` y `sql/03_carga_masiva.sql` en MySQL Workbench. Luego, para reproducir el experimento de rendimiento, ejecutar `sql/05_explain.sql` tres veces, crear los índices mediante `sql/04_indices.sql` una sola vez y repetir las mediciones. `sql/05_consultas.sql` y `sql/06_vistas.sql` reúnen las consultas y la vista verificadas. 
+Ejecutar en orden `sql/01_esquema.sql`, `sql/02_catalogos.sql` y `sql/03_carga_masiva.sql` en MySQL Workbench. Luego, para reproducir el experimento de rendimiento, ejecutar `sql/05_explain.sql` tres veces, crear los índices mediante `sql/04_indices.sql` una sola vez y repetir las mediciones. `sql/05_consultas.sql` y `sql/06_vistas.sql` reúnen las consultas y las tres vistas verificadas. Para la Etapa 4, crear el usuario `fs_catalogo` desde Workbench con una contraseña propia y ejecutar `sql/07_seguridad.sql` desde la conexión administradora; los errores intencionales de permisos e integridad se prueban por separado. Nunca guardar la contraseña en scripts, capturas ni en GitHub. 
 
 El esquema conserva datos existentes; los indices se crean una sola vez. La reconstrucción integral e idempotente se preparará para el ZIP final y todavía no está validada desde una base vacía.
