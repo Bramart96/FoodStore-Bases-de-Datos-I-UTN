@@ -26,6 +26,8 @@ La relación es de una categoría a muchos productos. Las decisiones sobre restr
 ```text
 sql/
   01_esquema.sql
+  02_catalogos.sql
+  03_carga_masiva.sql
 docs/
   informe_tecnico.md
 README.md
@@ -40,10 +42,11 @@ Los scripts y demás archivos se incorporan a medida que se implementan y prueba
 - Tablas `categoria` y `producto` creadas; PK, FK, UNIQUE y CHECK verificadas en Workbench.
 - Pruebas de integridad de ambas tablas realizadas, con registro de resultados en el informe.
 - DER generado y guardado localmente; incorporación de los archivos exportados al repositorio pendiente.
-- Carga masiva, reportes, seguridad y concurrencia pendientes.
+- Carga masiva realizada: 100 categorías y 9.900 productos; 5 controles de consistencia comprobados.
+- Consultas de negocio, rendimiento, seguridad y concurrencia pendientes.
 
 ## Ejecución
 
-Abrir `sql/01_esquema.sql` en MySQL Workbench y ejecutarlo sobre la conexión local. El script contiene el esquema y las definiciones de `categoria` y `producto`. Revisar el resultado con `SHOW CREATE TABLE` antes de continuar.
+Ejecutar en orden `sql/01_esquema.sql`, `sql/02_catalogos.sql` y `sql/03_carga_masiva.sql` en MySQL Workbench. El primero crea las tablas; los siguientes contienen los datos de prueba y cinco comprobaciones de consistencia. Los dos scripts de carga fueron organizados para reproducir los datos iniciales y las cargas ejecutadas; esta secuencia completa todavía no se ha validado desde una base vacía.
 
 El script utiliza `IF NOT EXISTS` para evitar volver a crear objetos existentes; no elimina datos previos. La estrategia de reconstrucción completa del esquema se definirá para la entrega final.

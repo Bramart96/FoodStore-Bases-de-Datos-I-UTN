@@ -110,14 +110,39 @@ Las comprobaciones se realizaron en MySQL Workbench. Se conserva el resultado re
 
 **Referencia al código:** `sql/01_esquema.sql`. Las inserciones de prueba y sus errores se ejecutaron en Workbench; se preparará una versión ordenada y reproducible de las evidencias para la entrega.
 
-## 6. Próximas etapas
+## 6. Carga masiva y verificaciones — Etapa 2
+
+**Objetivo:** disponer de al menos 10.000 registros ficticios en dos tablas, generados mediante SQL puro, sin romper las restricciones establecidas en el modelo.
+
+**Mecanismo utilizado:** se conservaron inicialmente dos categorías de prueba y un producto válido. Para llegar a 100 categorías se generaron 98 adicionales mediante una expresión de tabla común recursiva (CTE), que produce números del 1 al 98 y forma nombres consecutivos. Para los productos se utilizó una CTE de dígitos combinados con CROSS JOIN, capaz de producir números del 1 al 10.000; se seleccionaron los primeros 9.899. La numeración permite construir nombres, precios y cantidades de stock ficticios mediante CONCAT, LPAD y MOD. Para asignar categorías se numeraron los identificadores existentes con ROW_NUMBER y se repartieron los productos en 100 posiciones mediante MOD. Las inserciones emplean NOT EXISTS para evitar repetir los nombres de prueba al volver a ejecutarlas.
+
+La estructura respeta la FK de producto a categoria; las comprobaciones del servidor confirmaron que no quedaron productos huérfanos. Todas las filas generadas tienen precios y stock no negativos, y los indicadores de estado utilizan sus valores predeterminados válidos. Las verificaciones contemplan cantidad de registros, integridad referencial, dominios, categorías utilizadas y duplicación de nombres generados. Los valores de precios y existencias son ficticios y no representan operaciones de venta reales.
+
+**Resultado informado y confirmado por el estudiante después de ejecutar ambos bloques en Workbench:**
+
+| Control | Resultado |
+| --- | --- |
+| Categorías | 100 |
+| Productos | 9.900 |
+| Total de registros | 10.000 |
+| Productos sin categoría | 0 |
+| Registros con precio/stock/estado inválido | 0 |
+| Categorías utilizadas por productos | 100 |
+| Nombres duplicados de prueba | 0 filas |
+
+**Referencias cruzadas:** sql/02_catalogos.sql y sql/03_carga_masiva.sql. Estos archivos reúnen las consultas probadas y las inserciones iniciales para permitir una futura reconstrucción. **Pendiente:** ejecutar desde cero la secuencia completa de scripts en un entorno de prueba antes de declarar garantizada su reproducibilidad integral.
+
+**Conclusión:** se alcanzó el mínimo de 10.000 registros y las cinco verificaciones devolvieron los resultados previstos. No se realizó ninguna medición de rendimiento en esta etapa; se aborda por separado en la Etapa 3.
+
+## 7. Próximas etapas
+
 
 La consigna exige desarrollar además generación masiva con SQL puro; consultas JOIN, GROUP BY/HAVING y subconsultas; índices y mediciones con/sin índice; vistas y permisos; y pruebas de concurrencia, deadlock, aislamiento y transacciones.
 
 Los scripts se incorporarán cuando el diseño y los resultados se comprueben en el entorno de trabajo.
 
-## 7. Entrega
+## 8. Entrega
 
 La entrega se organizará en un **PDF único**, un **ZIP con los scripts SQL ordenados e idempotentes** y un **video de 10 a 15 minutos**. La evidencia de uso de IA se recopilará como anexo textual completo por etapa, tal como solicita la consigna, fuera del código del repositorio.
 
-**Fecha límite informada:** 09/11/2026.
+**Fecha límite actualizada por el estudiante:** 07/11/2026.
