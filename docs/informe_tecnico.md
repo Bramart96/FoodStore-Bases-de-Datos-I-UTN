@@ -134,14 +134,33 @@ La estructura respeta la FK de producto a categoria; las comprobaciones del serv
 
 **Conclusión:** se alcanzó el mínimo de 10.000 registros y las cinco verificaciones devolvieron los resultados previstos. No se realizó ninguna medición de rendimiento en esta etapa; se aborda por separado en la Etapa 3.
 
-## 7. Próximas etapas
+## 7. Consultas, vista y rendimiento — Etapa 3
+
+Se ejecutaron y comprobaron cuatro consultas: JOIN para listar productos de Bebidas, JOIN con filtro por rango de precios, GROUP BY/HAVING para categorías con al menos 80 productos y una subconsulta para encontrar productos por encima del precio promedio. La subconsulta original dio un error 1064; se probó una versión con alias explícitos que devolvió 15 filas. También se creó y consultó con éxito \`vista_resumen_categorias\`, que muestra la cantidad de productos, el stock total y el precio promedio de cada categoría activa.
+
+Se realizaron tres mediciones por consulta y condición mediante \`EXPLAIN ANALYZE\`. Se tomaron los tiempos \`actual time\` del operador raíz del plan, en milisegundos; no los tiempos del panel Action Output de Workbench. Antes de agregar índices, las búsquedas por nombre y precio realizaron un escaneo completo de la tabla producto. Tras crear los índices, la búsqueda exacta pasó a utilizar \`idx_producto_nombre\`, y la búsqueda por rango utilizó \`idx_producto_precio\`. En el JOIN se observó un acceso por índice a categoría a través de \`idx_categoria_nombre\`; el detalle completo del acceso a producto no se conservó en los textos compartidos por el estudiante.
+
+**Índices creados y comprobados:** \`idx_producto_nombre\`, \`idx_producto_precio\`, \`idx_producto_categoria_precio\`, \`idx_categoria_nombre\`. Se verificaron con SHOW INDEX sobre ambas tablas.
+
+| Consulta | Antes: 3 ejecuciones (ms) | Mediana antes (ms) | Después: 3 ejecuciones (ms) | Mediana después (ms) |
+| --- | --- | ---: | --- | ---: |
+| Igualdad por nombre | 10.20, 9.35, 12.70 | 10.20 | 0.122, 0.0344, 0.0644 | 0.0644 |
+| Rango de precios | 9.51, 7.69, 8.17 | 8.17 | 4.45, 4.14, 6.03 | 4.45 |
+| JOIN con filtros | 0.293, 0.495, 0.439 | 0.439 | 0.128, 0.186, 0.138 | 0.138 |
+
+**Interpretación:** las tres medianas disminuyeron en esta prueba concreta: igualdad aproximadamente 158,4 veces, rango 1,84 veces y JOIN 3,18 veces. No se extrapolan estos resultados a otros tamaños de tabla. Los cuatro índices se crearon con éxito y los registros de EXPLAIN ANALYZE fueron compartidos por el estudiante. La comparación refleja la presencia o ausencia de índices secundarios adicionales; las claves primarias y el índice asociado a la FK existían previamente.
+
+**Archivos:** sql/04_indices.sql, sql/05_consultas.sql, sql/05_explain.sql y sql/06_vistas.sql. Los archivos organizan las consultas ya ejecutadas; falta realizar la prueba integral de reconstrucción del ZIP.
+
+## 8. Próximas etapas
 
 
-La consigna exige desarrollar además generación masiva con SQL puro; consultas JOIN, GROUP BY/HAVING y subconsultas; índices y mediciones con/sin índice; vistas y permisos; y pruebas de concurrencia, deadlock, aislamiento y transacciones.
+
+Las etapas de carga masiva y consultas/rendimiento fueron ejecutadas y comprobadas. Restan seguridad (dos vistas de acceso restringido, permisos y consulta segura), concurrencia, deadlock, aislamiento, transacciones y la integración de la entrega.
 
 Los scripts se incorporarán cuando el diseño y los resultados se comprueben en el entorno de trabajo.
 
-## 8. Entrega
+## 9. Entrega
 
 La entrega se organizará en un **PDF único**, un **ZIP con los scripts SQL ordenados e idempotentes** y un **video de 10 a 15 minutos**. La evidencia de uso de IA se recopilará como anexo textual completo por etapa, tal como solicita la consigna, fuera del código del repositorio.
 
