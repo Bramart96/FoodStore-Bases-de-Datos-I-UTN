@@ -154,28 +154,45 @@ Se realizaron tres mediciones por consulta y condición mediante `EXPLAIN ANALYZ
 
 ## 8. Seguridad, permisos y consulta parametrizada — Etapa 4
 
-Se crearon dos vistas diferenciadas: \`vista_catalogo_publico\`, que expone id, nombre, precio y categoría sin stock; y \`vista_inventario_interno\`, que expone id, nombre, stock y categoría sin precios. Se verificaron ambas mediante SELECT con LIMIT 10. La vista resumen de la Etapa 3 permanece independiente.
+Se crearon dos vistas diferenciadas: `vista_catalogo_publico`, que expone id, nombre, precio y categoría sin stock; y `vista_inventario_interno`, que expone id, nombre, stock y categoría sin precios. Se verificaron ambas mediante SELECT con LIMIT 10. La vista resumen de la Etapa 3 permanece independiente.
 
-Se creó mediante Workbench el usuario \`fs_catalogo\` con host \`localhost\`, y se le concedió únicamente SELECT sobre \`vista_catalogo_publico\`. Los permisos se inspeccionaron con SHOW GRANTS y se conectó un segundo cliente con este usuario. Pruebas: consulta de vista pública → 5 filas; consulta directa a \`producto\` → error 1142; consulta a \`vista_inventario_interno\` → error 1142. Posteriormente se cambió la contraseña de la cuenta para que la anterior no siguiera siendo válida; se comprobó una nueva conexión y una consulta exitosa de cinco filas. No se almacena ninguna contraseña en el repositorio.
+Se creó mediante Workbench el usuario `fs_catalogo` con host `localhost`, y se le concedió únicamente SELECT sobre `vista_catalogo_publico`. Los permisos se inspeccionaron con SHOW GRANTS y se conectó un segundo cliente con este usuario. Pruebas: consulta de vista pública → 5 filas; consulta directa a `producto` → error 1142; consulta a `vista_inventario_interno` → error 1142. Posteriormente se cambió la contraseña de la cuenta para que la anterior no siguiera siendo válida; se comprobó una nueva conexión y una consulta exitosa de cinco filas. No se almacena ninguna contraseña en el repositorio.
 
-Se implementó \`sp_buscar_producto_seguro(IN p_nombre VARCHAR(120))\`, que usa el parámetro directamente en una condición SQL estática, sin concatenación ni SQL dinámico. La búsqueda del agua mineral devolvió un registro; la cadena de prueba \`' OR '1' = '1\` devolvió cero filas y no alteró la condición de la consulta. La advertencia 1305 de DROP PROCEDURE IF EXISTS se debió a la inexistencia inicial del procedimiento.
+Se implementó `sp_buscar_producto_seguro(IN p_nombre VARCHAR(120))`, que usa el parámetro directamente en una condición SQL estática, sin concatenación ni SQL dinámico. La búsqueda del agua mineral devolvió un registro; la cadena de prueba `' OR '1' = '1` devolvió cero filas y no alteró la condición de la consulta. La advertencia 1305 de DROP PROCEDURE IF EXISTS se debió a la inexistencia inicial del procedimiento.
 
-Se efectuaron dos pruebas negativas de integridad sobre producto (en consultas separadas para no interrumpir el resto del script): categoría inexistente → error 1452 por FK; precio negativo → error 3819 por \`chk_producto_precio\`. Tras esos rechazos se verificó que había 9.900 productos, es decir, las inserciones inválidas no modificaron la carga.
+Se efectuaron dos pruebas negativas de integridad sobre producto (en consultas separadas para no interrumpir el resto del script): categoría inexistente → error 1452 por FK; precio negativo → error 3819 por `chk_producto_precio`. Tras esos rechazos se verificó que había 9.900 productos, es decir, las inserciones inválidas no modificaron la carga.
 
-**Archivos:** las vistas se incorporan a \`sql/06_vistas.sql\`; \`sql/07_seguridad.sql\` reúne el procedimiento, el permiso SELECT y las instrucciones para las pruebas manuales. La creación inicial del usuario requiere definir una contraseña privada en Workbench, fuera del código. La secuencia completa todavía no ha sido probada desde un servidor sin cuentas ni esquemas.
+**Archivos:** las vistas se incorporan a `sql/06_vistas.sql`; `sql/07_seguridad.sql` reúne el procedimiento, el permiso SELECT y las instrucciones para las pruebas manuales. La creación inicial del usuario requiere definir una contraseña privada en Workbench, fuera del código. La secuencia completa todavía no ha sido probada desde un servidor sin cuentas ni esquemas.
 
 **Conclusión:** se verificaron controles de acceso según el principio de mínimo privilegio, exposición acotada de datos mediante vistas, consulta parametrizada y dos restricciones de integridad. No se afirma que esto constituya una auditoría integral de seguridad.
 
-## 9. Próximas etapas
+## 9. Concurrencia y transacciones — Etapa 5
 
+Se utilizaron dos conexiones independientes de Workbench (IDs 42 y 44) para simular un deadlock real. A actualizó el producto 1 y B el 903 en transacciones separadas; al solicitar ambas los registros bloqueados por la otra se obtuvo **ERROR 1213** en B. En A se observó por separado **ERROR 2013**, pérdida de conexión durante la espera; no es el error de deadlock. Tras los ROLLBACK se comprobaron los stocks originales (ID 1 = 20, ID 903 = 14).
 
+La comparación de aislamiento se realizó con las sesiones IDs 49 y 51. Bajo REPEATABLE READ, A observó stock 20 antes y después del COMMIT de B, que lo elevó a 21. En READ COMMITTED, A observó primero 21 y luego 22 tras un nuevo COMMIT de B. Después se restauró el producto 1 a 20.
 
+Se creó sp_descontar_stock_retry: utiliza START TRANSACTION, COMMIT, un handler SQLEXCEPTION con GET STACKED DIAGNOSTICS, ROLLBACK y hasta dos reintentos con pausas de 0,2 y 0,4 segundos para 1213 o SQLSTATE 40001. Los errores se muestran como resultados SQL, sin guardar una bitácora persistente. Se probó un descuento válido en el producto 903 (stock 14 a 13), un descuento imposible de 9999 unidades (error final 1644, sin modificar el stock) y la restauración del stock a 14.
 
-Las etapas de carga masiva, consultas/rendimiento y seguridad fueron ejecutadas y comprobadas. Restan concurrencia, deadlock, aislamiento, transacciones y la integración de la entrega.
+Se ensayó el reintento mediante una **simulación controlada** de error 1213/40001 en una variante temporal: intento 1 devolvió ROLLBACK y 1213/40001; intento 2 devolvió COMMIT. Se restauró el stock y se reinstaló la versión definitiva sin código de simulación. SHOW PROCEDURE STATUS confirmó su existencia.
 
-Los scripts se incorporarán cuando el diseño y los resultados se comprueben en el entorno de trabajo.
+**Conclusiones de concurrencia (8 líneas):**
+1. Bloquear dos productos en orden opuesto generó un deadlock real.
+2. El error 1213 permitió identificar el deadlock, a diferencia del error de conexión 2013.
+3. ROLLBACK evitó conservar cambios transitorios de las operaciones de prueba.
+4. REPEATABLE READ mantuvo la versión de los datos observada al comienzo de la lectura consistente.
+5. READ COMMITTED reflejó un COMMIT posterior de la otra sesión.
+6. El procedimiento descontó stock válido y rechazó una cantidad insuficiente.
+7. La simulación de 1213 confirmó la lógica de retry en el segundo intento.
+8. Las modificaciones por ID usan la PK; no se midió una comparación con índices desactivados en concurrencia.
 
-## 10. Entrega
+**Scripts:** sql/08_transacciones.sql y sql/09_concurrencia_guiada.sql.
+
+## 10. Pendientes de entrega
+
+La entrega requiere una revisión integral de reproducibilidad, completar el script de creación del usuario de seguridad sin exponer contraseñas, incorporar el DER, PDF técnico, anexo de conversaciones reales, ZIP y video.
+
+## 11. Entrega
 
 La entrega se organizará en un **PDF único**, un **ZIP con los scripts SQL ordenados e idempotentes** y un **video de 10 a 15 minutos**. La evidencia de uso de IA se recopilará como anexo textual completo por etapa, tal como solicita la consigna, fuera del código del repositorio.
 
