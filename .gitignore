@@ -1,0 +1,18 @@
+# Archivos temporales y del editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+*.tmp
+*~
+
+# Información de conexión local
+.env
+.env.*
+*.pem
+*.key
+
+# Copias y exportaciones locales
+*.bak
+*.sql.bak
