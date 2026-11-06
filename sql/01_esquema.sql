@@ -2,7 +2,8 @@
 -- Esquema relacional: categoria (1) -> (N) producto
 -- Servidor de desarrollo: MySQL 8.0.46.
 -- Estructuras y restricciones contrastadas con Workbench.
--- Este script conserva tablas existentes; no reconstruye datos.
+-- Script de instalacion: recrea tablas; BORRA datos previos del esquema.
+-- No ejecutar sobre la base en uso; probado en copia aislada.
 
 CREATE DATABASE IF NOT EXISTS foodstore_bdi
     CHARACTER SET utf8mb4
@@ -10,7 +11,16 @@ CREATE DATABASE IF NOT EXISTS foodstore_bdi
 
 USE foodstore_bdi;
 
-CREATE TABLE IF NOT EXISTS categoria (
+-- Retirar objetos dependientes antes de recrear el esquema.
+DROP VIEW IF EXISTS vista_catalogo_publico;
+DROP VIEW IF EXISTS vista_inventario_interno;
+DROP VIEW IF EXISTS vista_resumen_categorias;
+DROP PROCEDURE IF EXISTS sp_buscar_producto_seguro;
+DROP PROCEDURE IF EXISTS sp_descontar_stock_retry;
+DROP TABLE IF EXISTS producto;
+DROP TABLE IF EXISTS categoria;
+
+CREATE TABLE categoria (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(255) NULL,
@@ -29,7 +39,7 @@ CREATE TABLE IF NOT EXISTS categoria (
         CHECK (eliminado IN (0, 1))
 ) ENGINE = InnoDB;
 
-CREATE TABLE IF NOT EXISTS producto (
+CREATE TABLE producto (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nombre VARCHAR(120) NOT NULL,
     precio DECIMAL(10,2) NOT NULL,
@@ -64,8 +74,5 @@ CREATE TABLE IF NOT EXISTS producto (
 SHOW CREATE TABLE categoria;
 SHOW CREATE TABLE producto;
 
--- Nota: IF NOT EXISTS evita volver a crear las tablas, pero no actualiza
--- una estructura distinta ya existente. Antes de la entrega se preparará
--- el orden de reconstrucción con DROP IF EXISTS según la consigna,
--- solo para un entorno de prueba y conservando copias necesarias.
+-- El script permite reconstruir el modelo desde cero.
 -- La FK no controla si la categoría está activa: regla pendiente.

@@ -1,11 +1,12 @@
 -- Food Store | Etapa 4 - Seguridad y procedimiento parametrizado
 -- Ejecución: conexión administradora MySQL Local.
 -- No se almacenan contraseñas en el repositorio.
--- Requisito previo: crear manualmente 'fs_catalogo'@'localhost'
--- desde MySQL Workbench > Administration > Users and Privileges,
--- asignando una contraseña robusta que se guarda de forma segura.
--- Primero ejecutar 06_vistas.sql para disponer de la vista pública.
+-- Crear lector con clave aleatoria, sin publicarla en scripts.
+-- Requiere MySQL 8.0.18+ y haber ejecutado 06_vistas.sql.
 USE foodstore_bdi;
+
+CREATE USER IF NOT EXISTS 'fs_catalogo'@'localhost'
+    IDENTIFIED BY RANDOM PASSWORD;
 
 -- Principio de mínimo privilegio: el lector únicamente puede consultar
 -- la vista pública. NO conceder SELECT sobre producto ni inventario.
